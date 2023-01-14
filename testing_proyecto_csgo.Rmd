@@ -30,7 +30,8 @@ df = df[sample(1:nrow(df)), ]
 
 
 ```{r}
-df_test <- head(df, 15000)
+#df_test <- head(df, 15000)
+df_test <- head(df, 1000)
 ```
 
 ```{r}
@@ -78,7 +79,7 @@ str(df_test)
 
 
 ```{r}
-View(df_test)
+#View(df_test)
 ```
 
 ```{r}
@@ -93,7 +94,7 @@ df_test$map <- str_to_title(df_test$map)
 ```
 
 ```{r}
-View(df_test)
+#View(df_test)
 ```
 
 ```{r}
@@ -201,7 +202,7 @@ Al final del proceso, se tiene un dataframe escalado y con la variable round_win
 head(df_test)
 ```
 ```{r}
-View(df_test)
+#View(df_test)
 ```
 
 
@@ -276,25 +277,26 @@ print(cr2)
 conf_matrix_2 <- as.data.frame(table(pred_2, y_test))
 
 ggplot(data = conf_matrix_2, aes(x = pred_2, y = y_test)) +
-  ggtitle("Logistic Regression") +
+  ggtitle("Decision Tree") +
   geom_tile(aes(fill = Freq)) +
   geom_text(aes(label = Freq), color = "black", size = 6, vjust = 0.1, hjust = 0.6) +
   scale_fill_gradient(low = "#86B1D3", high = "#F49541" )
 ```
 
-# Modelo 3: Random Forest
+Modelo 3: K-NN
+
 ```{r}
-library(randomForest)
-model_3 <- randomForest(y_train ~ ., data = x_train)
-pred_3 <- predict(model_3, x_test)
-cr3 <- confusionMatrix(pred_3, y_test)
-print(cr3)
+library(caret)
+library(class)
 ```
 
+```{r}
+model_knn <- knn(x_train, x_test, y_train, k = 5, prob = TRUE)
+```
 
-
-
-
+```{r}
+pred_knn <- predict(model_knn, x_test)
+```
 
 
 
