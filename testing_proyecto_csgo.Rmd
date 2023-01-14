@@ -154,7 +154,6 @@ df_test$bomb_planted <- as.numeric(df_test$bomb_planted)
 ```{r}
 df_test$round_winner <- as.factor(df_test$round_winner)
 df_test$round_winner <- as.numeric(df_test$round_winner)
-
 ```
 
 ```{r}
@@ -253,13 +252,65 @@ print(cr1)
 ```
 
 ```{r}
-conf_matrix <- as.data.frame(table(pred_1, y_test))
+conf_matrix_1 <- as.data.frame(table(pred_1, y_test))
 
-ggplot(data = conf_matrix, aes(x = pred_1, y = y_test)) +
+ggplot(data = conf_matrix_1, aes(x = pred_1, y = y_test)) +
+  ggtitle("Logistic Regression") +
   geom_tile(aes(fill = Freq)) +
   geom_text(aes(label = Freq), color = "black", size = 6, vjust = 0.1, hjust = 0.6) +
   scale_fill_gradient(low = "white", high = "steelblue")
 ```
+
+# Modelo 2: Decision Tree
+
+```{r}
+library(rpart)
+model_2 <- rpart(y_train ~ ., data = x_train, method = "class")
+pred_2 <- predict(model_2, x_test, type = "class")
+cr2 <- confusionMatrix(pred_2, y_test)
+print(cr2)
+```
+
+
+```{r}
+conf_matrix_2 <- as.data.frame(table(pred_2, y_test))
+
+ggplot(data = conf_matrix_2, aes(x = pred_2, y = y_test)) +
+  ggtitle("Logistic Regression") +
+  geom_tile(aes(fill = Freq)) +
+  geom_text(aes(label = Freq), color = "black", size = 6, vjust = 0.1, hjust = 0.6) +
+  scale_fill_gradient(low = "#86B1D3", high = "#F49541" )
+```
+
+# Modelo 3: Random Forest
+```{r}
+library(randomForest)
+model_3 <- randomForest(y_train ~ ., data = x_train)
+pred_3 <- predict(model_3, x_test)
+cr3 <- confusionMatrix(pred_3, y_test)
+print(cr3)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
