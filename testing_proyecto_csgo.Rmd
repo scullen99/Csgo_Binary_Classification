@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+#knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
@@ -15,13 +15,13 @@ library(ggplot2)
 library(psych)
 library(caret)
 library(e1071)
+library(stringr)
+library(rpart)
 ```
 
 ```{r}
-df <- read.csv("csgo_round_snapshots.csv")
+df <- read.csv("/home/javiortig/uni/aprendizaje-automatico/proyecto/csgo_round_snapshots.csv")
 ```
-
-# He hecho un subdataset de las primeras 10000 filas porque me tardaba en cargar esto como 2 mins tu xd
 
 ```{r}
 set.seed(1)
@@ -30,8 +30,7 @@ df = df[sample(1:nrow(df)), ]
 
 
 ```{r}
-#df_test <- head(df, 15000)
-df_test <- head(df, 1000)
+df_test <- head(df, 50000)
 ```
 
 ```{r}
@@ -70,8 +69,7 @@ df_test[duplicated(df_test), ]
 df_test <- unique(df_test)
 dim(df_test)
 ```
-# Se han borrado ~12 líneas, con el df completo vamos a flipar xd
-# Aunque pienso, tiene sentido que existan rondas iguales
+
 
 ```{r}
 str(df_test)
@@ -79,12 +77,10 @@ str(df_test)
 
 
 ```{r}
-#View(df_test)
+View(df_test)
 ```
 
 ```{r}
-library(stringr)
-
 # remover "de_" de las casillas de la columna "col_name"
 df_test$map <- sub("de_","", df_test$map)
 
@@ -94,7 +90,7 @@ df_test$map <- str_to_title(df_test$map)
 ```
 
 ```{r}
-#View(df_test)
+View(df_test)
 ```
 
 ```{r}
@@ -112,6 +108,8 @@ ggplot(df_test, aes(x = round_winner)) + geom_bar(aes(fill = round_winner)) +
   ylab("Número de rondas") +
   scale_fill_discrete(name = "Ganador ronda")
 ```
+Viendo esta gráfica, nos damos cuenta que los Terroristas tienen cierta ventaja en general contra los CT. Esto tiene sentido, ya que los propios creadores han publicado estadísticas similares anteriormente, por lo que hemos obtenido una pista más de que los datos creados que tenemos son de calidad.
+
 
 # Estas son las columnas con todo valor 0:
 ```{r}
@@ -131,6 +129,7 @@ dim(df_test)
 ```{r}
 head(df_test)
 ```
+Borramos toas las columnas con valor 0, esto se debe a que en el competitivo del cs_go hay ciertas armas que nunca se usan, por eso no sorprende que siempre sean 0.
 
 
 ---------------------------------------------------
@@ -155,6 +154,8 @@ df_test$bomb_planted <- as.numeric(df_test$bomb_planted)
 ```{r}
 df_test$round_winner <- as.factor(df_test$round_winner)
 df_test$round_winner <- as.numeric(df_test$round_winner)
+df_test$round_winner <- df_test$round_winner - 1
+
 ```
 
 ```{r}
@@ -169,19 +170,18 @@ c <- lapply(col, function(i) cor(df_test$round_winner, df_test[,i]))
 ```{r}
 str(df_test)
 ```
+Hasta aquí hacemos transformaciones en los tipos, y convertimos clases categóricas en números discretos, como planted y winned a 0 si es negativo, 1 si es positivo.
 
 -------------------------------------------------
 Normalización de los datos usando Standard Scalar
 -------------------------------------------------
-
-La primera línea carga la librería caret.
-La segunda línea crea el objeto standscl que se encarga de escalar los datos del dataframe df_test utilizando el metodo preProcess.
+crea el objeto standscl que se encarga de escalar los datos del dataframe df_test utilizando el metodo preProcess.
 ```{r}
 standscl <- preProcess(df_test, method = c("center", "scale"))
 ```
 
-La tercera línea se utiliza el objeto standscl para escalar los datos y se almacena en el mismo dataframe df_test.
-La cuarta línea convierte df_test a un dataframe de R.
+La segunda línea se utiliza el objeto standscl para escalar los datos y se almacena en el mismo dataframe df_test.
+La tercera línea convierte df_test a un dataframe de R.
 ```{r}
 df_test <- predict(standscl, df_test)
 df_test <- as.data.frame(df_test)
@@ -202,7 +202,7 @@ Al final del proceso, se tiene un dataframe escalado y con la variable round_win
 head(df_test)
 ```
 ```{r}
-#View(df_test)
+View(df_test)
 ```
 
 
@@ -220,6 +220,7 @@ y <- df_test$round_winner
 y <- y-1
 head(y)
 ```
+Aquí hemos dividido los datos en las variables predictoras y la variable a predecir(y = round_winner)
 
 ----------------
 Train Test Split
@@ -232,6 +233,12 @@ y_train <- y[split]
 x_test <- x[-split,]
 y_test <- y[-split]
 ```
+
+dividimos los datos en un train y test, otorgando a train el 80% de los datos, y en consecuencia un 20% a test.
+
+# Apunte sobre el problema en cuestión
+Es importante tener en cuenta que los datos de los que disponemos no nos van a permitir hacer predicciones si quiera cercanas al 90%, ya que, si prestamos atención al problema que estamos intentando resolver, una partida de counter strike en sí ya es bastante impredecible. Al final, se trata de 10 humanos con distinta skill(como puede ser la puntería), emociones, horas de sueño... 
+Por ello, los resultados que se muestran a continuación son, al menos para los autores, bastante sorprendentes; ya que sólo conociendo factores como las armas, el dinero o la vida(sin saber quién hay detrás de la pantalla) se ha podido superar al azar por bastante.
 
 # Modelo 1: Logistic Regression
 ```{r}
@@ -253,19 +260,22 @@ print(cr1)
 ```
 
 ```{r}
-conf_matrix_1 <- as.data.frame(table(pred_1, y_test))
+conf_matrix <- as.data.frame(table(pred_1, y_test))
 
-ggplot(data = conf_matrix_1, aes(x = pred_1, y = y_test)) +
-  ggtitle("Logistic Regression") +
+ggplot(data = conf_matrix, aes(x = pred_1, y = y_test)) +
+  ggtitle("Modelo 1: Logistic Regression", subtitle = "Confusion Matrix") +
+  theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(size = 20), plot.subtitle = element_text(size = 15)) +
+  xlab("Valores originales") + 
+  ylab("Valores de test") +
   geom_tile(aes(fill = Freq)) +
   geom_text(aes(label = Freq), color = "black", size = 6, vjust = 0.1, hjust = 0.6) +
-  scale_fill_gradient(low = "white", high = "steelblue")
+  scale_fill_gradient(low = "#E0CB48", high = "#CE93D8")
 ```
 
 # Modelo 2: Decision Tree
 
 ```{r}
-library(rpart)
 model_2 <- rpart(y_train ~ ., data = x_train, method = "class")
 pred_2 <- predict(model_2, x_test, type = "class")
 cr2 <- confusionMatrix(pred_2, y_test)
@@ -277,48 +287,55 @@ print(cr2)
 conf_matrix_2 <- as.data.frame(table(pred_2, y_test))
 
 ggplot(data = conf_matrix_2, aes(x = pred_2, y = y_test)) +
-  ggtitle("Decision Tree") +
+  ggtitle("Modelo 2: Decision Tree", subtitle = "Confusion Matrix") +
+  theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(size = 20), plot.subtitle = element_text(size = 15)) +
+  xlab("Valores originales") + 
+  ylab("Valores de test") +
   geom_tile(aes(fill = Freq)) +
   geom_text(aes(label = Freq), color = "black", size = 6, vjust = 0.1, hjust = 0.6) +
   scale_fill_gradient(low = "#86B1D3", high = "#F49541" )
 ```
 
-Modelo 3: K-NN
-
 ```{r}
-library(caret)
-library(class)
+model_3 <- svm(y_train ~ ., data = x_train, type = "C-classification", kernel = "linear")
+pred_3 <- predict(model_3, x_test, type = "class")
+cr3 <- confusionMatrix(pred_3, y_test)
+print(cr3)
+```
+```{r}
+conf_matrix_3 <- as.data.frame(table(pred_3, y_test))
+
+ggplot(data = conf_matrix_3, aes(x = pred_3, y = y_test)) +
+  ggtitle("Modelo 3: SVM con Kernel Lineal", subtitle = "Confusion Matrix") +
+  theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(size = 20), plot.subtitle = element_text(size = 15)) +
+  xlab("Valores originales") + 
+  ylab("Valores de test") +
+  geom_tile(aes(fill = Freq)) +
+  geom_text(aes(label = Freq), color = "black", size = 6, vjust = 0.1, hjust = 0.6) +
+  scale_fill_gradient(low = "#86B1D3", high = "#F49541" )
+```
+```{r}
+model_3 <- svm(y_train ~ ., data = x_train, type = "C-classification", kernel = "polynomial")
+pred_3 <- predict(model_3, x_test, type = "class")
+cr3 <- confusionMatrix(pred_3, y_test)
+print(cr3)
 ```
 
 ```{r}
-model_knn <- knn(x_train, x_test, y_train, k = 5, prob = TRUE)
+model_3 <- svm(y_train ~ ., data = x_train, type = "C-classification", kernel = "radial")
+pred_3 <- predict(model_3, x_test, type = "class")
+cr3 <- confusionMatrix(pred_3, y_test)
+print(cr3)
 ```
 
 ```{r}
-pred_knn <- predict(model_knn, x_test)
+model_3 <- svm(y_train ~ ., data = x_train, type = "C-classification", kernel = "sigmoid")
+pred_3 <- predict(model_3, x_test, type = "class")
+cr3 <- confusionMatrix(pred_3, y_test)
+print(cr3)
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
