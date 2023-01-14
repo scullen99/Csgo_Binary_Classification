@@ -1,0 +1,273 @@
+---
+title: "Testing proyecto csgo"
+author: "Sergio y Javi"
+date: "2023-01-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#install.packages("ggplot2")
+library(ggplot2)
+library(psych)
+library(caret)
+library(e1071)
+```
+
+```{r}
+df <- read.csv("csgo_round_snapshots.csv")
+```
+
+# He hecho un subdataset de las primeras 10000 filas porque me tardaba en cargar esto como 2 mins tu xd
+
+```{r}
+set.seed(1)
+df = df[sample(1:nrow(df)), ]
+```
+
+
+```{r}
+df_test <- head(df, 15000)
+```
+
+```{r}
+dim(df_test)
+```
+```{r}
+colnames(df_test)
+```
+
+```{r}
+head(df_test)
+```
+
+```{r}
+summary(df_test)
+```
+
+```{r}
+str(df_test)
+```
+
+
+# Comprobar si existe duplicidad en el dataset
+
+```{r}
+any(duplicated(df_test))
+```
+
+# Como muestra "TRUE" significa que existen datos duplicados, vamos a quitarlos
+
+```{r}
+df_test[duplicated(df_test), ]
+```
+
+```{r}
+df_test <- unique(df_test)
+dim(df_test)
+```
+# Se han borrado ~12 líneas, con el df completo vamos a flipar xd
+# Aunque pienso, tiene sentido que existan rondas iguales
+
+```{r}
+str(df_test)
+```
+
+
+```{r}
+View(df_test)
+```
+
+```{r}
+library(stringr)
+
+# remover "de_" de las casillas de la columna "col_name"
+df_test$map <- sub("de_","", df_test$map)
+
+# convertir la primera letra de cada casilla a mayúscula
+df_test$map <- str_to_title(df_test$map)
+
+```
+
+```{r}
+View(df_test)
+```
+
+```{r}
+dim(df_test)
+```
+
+```{r}
+colSums(is.na(df_test))
+```
+```{r}
+ggplot(df_test, aes(x = round_winner)) + geom_bar(aes(fill = round_winner)) +
+  stat_count(aes(label = ..count..), geom = "text", vjust = 2.0, color = "black", size = 4.5) +
+  ggtitle("Rondas ganadas por cada equipo") +
+  xlab("") + 
+  ylab("Número de rondas") +
+  scale_fill_discrete(name = "Ganador ronda")
+```
+
+# Estas son las columnas con todo valor 0:
+```{r}
+which(colSums(df_test == 0) == nrow(df_test))
+```
+
+# Borrar las columnas que tienen todos sus valores "0"
+```{r}
+df_test <- df_test[, colSums(df_test != 0) > 0]
+```
+
+```{r}
+dim(df_test)
+```
+# Hemos conseguido borrar 14 columnas
+
+```{r}
+head(df_test)
+```
+
+
+---------------------------------------------------
+ETIQUETAR Y CODIFICAR TODOS LOS VALORES CATEGÓRICOS
+---------------------------------------------------
+
+# La primera línea convierte la columna especificada (en este caso 'map') a un factor.
+```{r}
+df_test$map <- as.factor(df_test$map)
+```
+
+# La segunda línea convierte el factor a un número.
+```{r}
+df_test$map <- as.numeric(df_test$map)
+```
+
+```{r}
+df_test$bomb_planted <- as.factor(df_test$bomb_planted)
+df_test$bomb_planted <- as.numeric(df_test$bomb_planted)
+```
+
+```{r}
+df_test$round_winner <- as.factor(df_test$round_winner)
+df_test$round_winner <- as.numeric(df_test$round_winner)
+
+```
+
+```{r}
+head(df_test)
+```
+
+```{r}
+col <- colnames(df_test)
+c <- lapply(col, function(i) cor(df_test$round_winner, df_test[,i]))
+```
+
+```{r}
+str(df_test)
+```
+
+-------------------------------------------------
+Normalización de los datos usando Standard Scalar
+-------------------------------------------------
+
+La primera línea carga la librería caret.
+La segunda línea crea el objeto standscl que se encarga de escalar los datos del dataframe df_test utilizando el metodo preProcess.
+```{r}
+standscl <- preProcess(df_test, method = c("center", "scale"))
+```
+
+La tercera línea se utiliza el objeto standscl para escalar los datos y se almacena en el mismo dataframe df_test.
+La cuarta línea convierte df_test a un dataframe de R.
+```{r}
+df_test <- predict(standscl, df_test)
+df_test <- as.data.frame(df_test)
+```
+
+La quinta línea se asignan los nombres de las columnas del dataframe df_test a la variable col.
+La sexta línea se codifica la variable round_winner utilizando la función as.factor() y as.numeric()
+```{r}
+colnames(df_test) <- col
+df_test$round_winner <- as.factor(df_test$round_winner)
+df_test$round_winner <- as.numeric(df_test$round_winner)
+```
+
+La séptima línea se utiliza la función head() para ver las primeras filas del dataframe.
+
+Al final del proceso, se tiene un dataframe escalado y con la variable round_winner codificada.
+```{r}
+head(df_test)
+```
+```{r}
+View(df_test)
+```
+
+
+--------------------------
+Dividir los datos en X e Y
+--------------------------
+
+```{r}
+x <- df_test[ , !(names(df_test) %in% c("round_winner"))]
+head(x)
+```
+
+```{r}
+y <- df_test$round_winner
+y <- y-1
+head(y)
+```
+
+----------------
+Train Test Split
+----------------
+
+```{r}
+split <- createDataPartition(y, p = 0.8, list = FALSE)
+x_train <- x[split,]
+y_train <- y[split]
+x_test <- x[-split,]
+y_test <- y[-split]
+```
+
+# Modelo 1: Logistic Regression
+```{r}
+model_1 <- glm(y_train ~ ., data = x_train, family = binomial())
+pred_1 <- predict(model_1, x_test, type = "response")
+pred_1 <- ifelse(pred_1 > 0.5, 1, 0)
+```
+
+```{r}
+pred_1 <- as.numeric(pred_1)
+pred_1 <- as.factor(pred_1)
+y_test <- as.numeric(y_test)
+y_test <- as.factor(y_test)
+```
+
+```{r}
+cr1 <- confusionMatrix(pred_1, y_test)
+print(cr1)
+```
+
+```{r}
+conf_matrix <- as.data.frame(table(pred_1, y_test))
+
+ggplot(data = conf_matrix, aes(x = pred_1, y = y_test)) +
+  geom_tile(aes(fill = Freq)) +
+  geom_text(aes(label = Freq), color = "black", size = 6, vjust = 0.1, hjust = 0.6) +
+  scale_fill_gradient(low = "white", high = "steelblue")
+```
+
+
+
+
+
+
+
+
+
+
+
