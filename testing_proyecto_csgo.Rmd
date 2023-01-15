@@ -18,25 +18,29 @@ library(e1071)
 library(stringr)
 ```
 
+Lectura Dataset
 ```{r}
 df <- read.csv("csgo_round_snapshots.csv")
 ```
 
-# He hecho un subdataset de las primeras 10000 filas porque me tardaba en cargar esto como 2 mins tu xd
-
+Este código establece una semilla aleatoria en R para que los resultados sean reproducibles, luego selecciona una muestra aleatoria de las filas de un dataframe llamado "df" y reemplaza el contenido de "df" con esa muestra seleccionada. La función "sample()" se utiliza para seleccionar las filas al azar y "nrow()" se utiliza para obtener el número total de filas en el dataframe.
 ```{r}
 set.seed(1)
 df = df[sample(1:nrow(df)), ]
 ```
 
-
+Este código toma las primeras 10,000 filas del dataframe llamado "df" y las asigna a un nuevo dataframe llamado "df_test".
 ```{r}
 df_test <- head(df, 10000)
 ```
 
+---------------------------------------
+Diferentes métricas para ver el dataset
+---------------------------------------
 ```{r}
 dim(df_test)
 ```
+
 ```{r}
 colnames(df_test)
 ```
@@ -54,61 +58,82 @@ str(df_test)
 ```
 
 
-# Comprobar si existe duplicidad en el dataset
-
+Comprobar si existe duplicidad en el dataset
+Este código utiliza la función any() y duplicated() para determinar si hay algún valor duplicado en el dataframe "df_test". La función duplicated() identifica los valores duplicados en el dataframe y devuelve un vector lógico con el mismo número de filas que el dataframe original, donde cada valor verdadero indica que el valor en esa fila es un duplicado. La función any() toma un vector lógico como entrada y devuelve verdadero si al menos uno de los valores es verdadero y falso si todos los valores son falsos. En este caso, el código devuelve verdadero si hay algún valor duplicado en el dataframe "df_test" y falso si no hay valores duplicados.
 ```{r}
 any(duplicated(df_test))
 ```
 
-# Como muestra "TRUE" significa que existen datos duplicados, vamos a quitarlos
-
+Como muestra "TRUE" significa que existen datos duplicados, vamos a quitarlos.
+Este código utiliza la función duplicated() para seleccionar las filas con valores duplicados en el dataframe "df_test" y devuelve esas filas como un nuevo dataframe. La función duplicated() identifica los valores duplicados en el dataframe y devuelve un vector lógico con el mismo número de filas que el dataframe original, donde cada valor verdadero indica que el valor en esa fila es un duplicado. Entonces, utilizando el vector lógico devuelto por duplicated() como un índice, se seleccionan solo las filas con valores duplicados en el dataframe "df_test" y se devuelve como un nuevo dataframe.
 ```{r}
 df_test[duplicated(df_test), ]
 ```
 
+Este código utiliza la función unique() para eliminar los valores duplicados en el dataframe "df_test" y asigna el dataframe sin duplicados a un nuevo dataframe llamado "df_test". La función unique() toma un dataframe como entrada y devuelve un dataframe con solo los valores únicos.
+
+Por otro lado, la función dim() devuelve las dimensiones del dataframe, es decir, el número de filas y columnas. En este caso, el código devuelve el número de filas y columnas del nuevo dataframe "df_test" sin duplicados.
 ```{r}
 df_test <- unique(df_test)
 dim(df_test)
 ```
 
-```{r}
-str(df_test)
-```
-
-
-```{r}
-View(df_test)
-```
-
+Renombre de casillas de la columna "map" para posteriormente hacer gráficas.
 ```{r}
 # remover "de_" de las casillas de la columna "col_name"
 df_test$map <- sub("de_","", df_test$map)
 
 # convertir la primera letra de cada casilla a mayúscula
 df_test$map <- str_to_title(df_test$map)
-
 ```
 
+Borrar todas las filas en las que existan rondas de desempate.
+Borrar todas las filas que contengan el mapa "Cache".
+Columna "ct_score" y "t_score" con valores > 15.
+
+Puedes utilizar el comando subset() junto con un operador lógico & (and) para 
+eliminar las filas en las que el valor de las columnas "ct_score" y "t_score" 
+sea mayor que 15.
 ```{r}
-View(df_test)
+df_test <- subset(df_test, !(df_test$ct_score > 15 & df_test$t_score > 15))
+df_test <- subset(df_test, df_test$map != "Cache")
 ```
 
-```{r}
-dim(df_test)
-```
 
+Puedes utilizar el comando subset() junto con un operador lógico & (and) para eliminar las filas en las que el valor de las columnas "ct_score" y "t_score" sea mayor que 15Este código utiliza la función colSums() junto con is.na() para contar el número de valores faltantes (NA) en cada columna del dataframe "df_test".
+
+La función is.na() determina si un valor es faltante (NA) y devuelve una matriz lógica con el mismo tamaño que el dataframe de entrada, donde cada valor verdadero indica que el valor en esa posición es faltante.
+
+La función colSums() toma una matriz lógica como entrada y devuelve un vector con la suma de los valores verdaderos (1) en cada columna. En este caso, el código devuelve el número de valores faltantes (NA) en cada columna del dataframe "df_test".
 ```{r}
 colSums(is.na(df_test))
 ```
 
 ```{r}
 ggplot(df_test, aes(x = round_winner)) + geom_bar(aes(fill = round_winner)) +
-  stat_count(aes(label = ..count..), geom = "text", vjust = 2.0, color = "black", size = 4.5) +
+  stat_count(aes(label = ..count..), geom = "text", vjust = 2.0, color = "black", size = 6.5) +
   ggtitle("Rondas ganadas por cada equipo") +
+  theme(plot.title = element_text(hjust = 0.5)) +
   xlab("") + 
   ylab("Número de rondas") +
-  scale_fill_discrete(name = "Ganador ronda")
+  scale_fill_manual(name = "Ganador ronda", values = c("CT" = "#3288FF", "T" = "#CC5151")) +
+  theme(plot.caption = element_text(size=15)) +
+  labs(caption = "Fuente: HTLV.org")
 ```
+
+```{r}
+ggplot(df_test, aes(x = round_winner)) + geom_bar(aes(fill = round_winner)) +
+  stat_count(aes(label = ..count..), geom = "text", vjust = 2.0, color = "black", size = 5) +
+  ggtitle("Rondas ganadas por cada equipo en cada mapa") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  xlab("") + 
+  ylab("Número de rondas") +
+  scale_fill_manual(name = "Ganador ronda", values = c("CT" = "#3288FF", "T" = "#CC5151")) +
+  facet_wrap(~map, ncol = 3) + 
+  theme(plot.caption = element_text(size=15)) +
+  labs(caption = "Fuente: HTLV.org")
+```
+
 
 # Estas son las columnas con todo valor 0:
 ```{r}
