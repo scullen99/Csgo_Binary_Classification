@@ -1,84 +1,119 @@
 ---
-title: "Testing proyecto csgo"
-author: "Sergio y Javi"
-date: "2023-01-13"
-output: html_document
+title: ""
+author: ""
+date: "2023-01-18"
 ---
 
 ```{r setup, include=FALSE}
-#knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, results='hide', warning = FALSE, error = FALSE)
 ```
 
-```{r}
+## Instalación y carga de librerías
+
+```{r Instalación de librerías}
 #install.packages("ggplot2")
 library(ggplot2)
 library(psych)
 library(caret)
 library(e1071)
 library(stringr)
+library(pROC)
 ```
 
-Lectura Dataset
+------------------------------------------------------------------------
+
+## Lectura del dataset
+
 ```{r}
 df <- read.csv("csgo_round_snapshots.csv")
 ```
 
-Este código establece una semilla aleatoria en R para que los resultados sean reproducibles, luego selecciona una muestra aleatoria de las filas de un dataframe llamado "df" y reemplaza el contenido de "df" con esa muestra seleccionada. La función "sample()" se utiliza para seleccionar las filas al azar y "nrow()" se utiliza para obtener el número total de filas en el dataframe.
+------------------------------------------------------------------------
+
+## Reproducibilidad del sistema
+
+Utilizamos set.seed para asegurar la reproducibilidad de los datos, y cogemos una muestra aleatoria con sample:
+
 ```{r}
-set.seed(1)
+set.seed(42)
 df = df[sample(1:nrow(df)), ]
 ```
 
-Este código toma las primeras 10,000 filas del dataframe llamado "df" y las asigna a un nuevo dataframe llamado "df_test".
+Una vez barajado, obtenemos los primeros 10.000 datos, ya que desgraciadamente carecemos de los recursos necesarios para utilizar todo el dataset y que no explote el ordenador:
+
 ```{r}
 df_test <- head(df, 10000)
 ```
 
----------------------------------------
-Diferentes métricas para ver el dataset
----------------------------------------
-```{r}
+------------------------------------------------------------------------
+
+## Diferentes métricas para ver el dataset
+
+```{r results='markup'}
 dim(df_test)
 ```
 
-```{r}
+------------------------------------------------------------------------
+
+## Visualización del dataset
+
+```{r results='markup'}
 colnames(df_test)
 ```
 
-```{r}
+------------------------------------------------------------------------
+
+## Visualización del dataset
+
+```{r results='markup'}
 head(df_test)
 ```
 
-```{r}
+------------------------------------------------------------------------
+
+## Visualización del dataset
+
+```{r results='markup'}
 summary(df_test)
 ```
 
-```{r}
+------------------------------------------------------------------------
+
+## Visualización del dataset
+
+```{r results='markup'}
 str(df_test)
 ```
 
+------------------------------------------------------------------------
 
-Comprobar si existe duplicidad en el dataset
-Este código utiliza la función any() y duplicated() para determinar si hay algún valor duplicado en el dataframe "df_test". La función duplicated() identifica los valores duplicados en el dataframe y devuelve un vector lógico con el mismo número de filas que el dataframe original, donde cada valor verdadero indica que el valor en esa fila es un duplicado. La función any() toma un vector lógico como entrada y devuelve verdadero si al menos uno de los valores es verdadero y falso si todos los valores son falsos. En este caso, el código devuelve verdadero si hay algún valor duplicado en el dataframe "df_test" y falso si no hay valores duplicados.
-```{r}
+## Borrado de datos duplicados
+
+Comprobamos si existe duplicidad de datos:
+
+```{r results='markup'}
 any(duplicated(df_test))
 ```
 
-Como muestra "TRUE" significa que existen datos duplicados, vamos a quitarlos.
-Este código utiliza la función duplicated() para seleccionar las filas con valores duplicados en el dataframe "df_test" y devuelve esas filas como un nuevo dataframe. La función duplicated() identifica los valores duplicados en el dataframe y devuelve un vector lógico con el mismo número de filas que el dataframe original, donde cada valor verdadero indica que el valor en esa fila es un duplicado. Entonces, utilizando el vector lógico devuelto por duplicated() como un índice, se seleccionan solo las filas con valores duplicados en el dataframe "df_test" y se devuelve como un nuevo dataframe.
+Como muestra "TRUE" significa que existen datos duplicados, vamos a quitarlos:
+
 ```{r}
 df_test[duplicated(df_test), ]
 ```
 
-Este código utiliza la función unique() para eliminar los valores duplicados en el dataframe "df_test" y asigna el dataframe sin duplicados a un nuevo dataframe llamado "df_test". La función unique() toma un dataframe como entrada y devuelve un dataframe con solo los valores únicos.
+Otra forma diferente para eliminar duplicados:
 
-Por otro lado, la función dim() devuelve las dimensiones del dataframe, es decir, el número de filas y columnas. En este caso, el código devuelve el número de filas y columnas del nuevo dataframe "df_test" sin duplicados.
-```{r}
+```{r results='markup'}
 df_test <- unique(df_test)
 dim(df_test)
 ```
 
-Renombre de casillas de la columna "map" para posteriormente hacer gráficas.
+------------------------------------------------------------------------
+
+## Visualización del dataset: Renombrar columnas
+
+Renombramos las casillas de la columna "map" para posteriormente hacer gráficas más bonitas:
+
 ```{r}
 # remover "de_" de las casillas de la columna "col_name"
 df_test$map <- sub("de_","", df_test$map)
@@ -87,29 +122,38 @@ df_test$map <- sub("de_","", df_test$map)
 df_test$map <- str_to_title(df_test$map)
 ```
 
-Borrar todas las filas en las que existan rondas de desempate.
-Borrar todas las filas que contengan el mapa "Cache".
-Columna "ct_score" y "t_score" con valores > 15.
+------------------------------------------------------------------------
 
-Puedes utilizar el comando subset() junto con un operador lógico & (and) para 
-eliminar las filas en las que el valor de las columnas "ct_score" y "t_score" 
-sea mayor que 15.
+## Valores atípicos
+
+Borramos todas las filas en las que existan rondas de desempate, ya que en general es un caso atípico y puede reducir nuestro accuracy. Borramos todas las filas del mapa Caché, puesto que no está en la rotación actual de competitivo:
+
 ```{r}
 df_test <- subset(df_test, !(df_test$ct_score > 15 & df_test$t_score > 15))
 df_test <- subset(df_test, df_test$map != "Cache")
 ```
 
+Comprobamos si tenemos datos con NA para cada columna:
 
-Puedes utilizar el comando subset() junto con un operador lógico & (and) para eliminar las filas en las que el valor de las columnas "ct_score" y "t_score" sea mayor que 15Este código utiliza la función colSums() junto con is.na() para contar el número de valores faltantes (NA) en cada columna del dataframe "df_test".
-
-La función is.na() determina si un valor es faltante (NA) y devuelve una matriz lógica con el mismo tamaño que el dataframe de entrada, donde cada valor verdadero indica que el valor en esa posición es faltante.
-
-La función colSums() toma una matriz lógica como entrada y devuelve un vector con la suma de los valores verdaderos (1) en cada columna. En este caso, el código devuelve el número de valores faltantes (NA) en cada columna del dataframe "df_test".
-```{r}
+```{r results='markup'}
 colSums(is.na(df_test))
 ```
 
-```{r}
+------------------------------------------------------------------------
+
+## Visualización del dataset
+
+Graficamos el número de casos negativos(ganan los Counter-Terrorists) y los casos positivos(ganan los Terroristas):
+
+Se puede observar que los Terroristas tienen cierta ventaja sobre los CT.
+
+Esto tiene sentido, ya que los propios desarrolladores lo han confirmado. Con esta información, nos aseguramos una vez más de la calidad de los datos.
+
+------------------------------------------------------------------------
+
+## Visualización del dataset
+
+```{r results='markup'}
 ggplot(df_test, aes(x = round_winner)) + geom_bar(aes(fill = round_winner)) +
   stat_count(aes(label = ..count..), geom = "text", vjust = 2.0, color = "black", size = 6.5) +
   ggtitle("Rondas ganadas por cada equipo") +
@@ -120,6 +164,16 @@ ggplot(df_test, aes(x = round_winner)) + geom_bar(aes(fill = round_winner)) +
   theme(plot.caption = element_text(size=15)) +
   labs(caption = "Fuente: HTLV.org")
 ```
+
+------------------------------------------------------------------------
+
+## Visualización del dataset
+
+Graficamos lo mismo para cada uno de los datos: Vemos que para los mapas de Nuke y train se dan el caso contrario. Esto se debe a que entrar a plantar la bomba es muy complicado, ya que hay muchos ángulos que cubrir, dando gran ventaja a los defensores.
+
+------------------------------------------------------------------------
+
+## Visualización del dataset
 
 ```{r}
 ggplot(df_test, aes(x = round_winner)) + geom_bar(aes(fill = round_winner)) +
@@ -134,119 +188,137 @@ ggplot(df_test, aes(x = round_winner)) + geom_bar(aes(fill = round_winner)) +
   labs(caption = "Fuente: HTLV.org")
 ```
 
+------------------------------------------------------------------------
 
-# Estas son las columnas con todo valor 0:
+## Limpieza del dataset: borrado de valores nulos
+
+Buscamos las columnas que tienen todo valor 0:
+
 ```{r}
 which(colSums(df_test == 0) == nrow(df_test))
 ```
 
-# Borrar las columnas que tienen todos sus valores "0"
+Las borramos y se nos queda:
+
 ```{r}
 df_test <- df_test[, colSums(df_test != 0) > 0]
 ```
 
-```{r}
+```{r results='markup'}
 dim(df_test)
 ```
-# Hemos conseguido borrar 14 columnas
 
-```{r}
-head(df_test)
-```
+Hemos conseguido borrar 10 columnas
 
----------------------------------------------------
-ETIQUETAR Y CODIFICAR TODOS LOS VALORES CATEGÓRICOS
----------------------------------------------------
+------------------------------------------------------------------------
 
-# La primera línea convierte la columna especificada (en este caso 'map') a un factor.
-```{r}
+# Etiquetado y codificación de los valores categóricos
+
+En esta sección transformamos todo el dataset a valores numéricos que puedan usarse como inputs en los modelos
+
+------------------------------------------------------------------------
+
+## Etiquetado y codificación de los valores categóricos
+
+Convertimos la columna especificada (en este caso 'map') a un factor:
+
+```{r results='markup'}
 df_test$map <- as.factor(df_test$map)
 ```
 
-# La segunda línea convierte el factor a un número.
-```{r}
+Cambiamos finalmente el factor a un número:
+
+```{r results='markup'}
 df_test$map <- as.numeric(df_test$map)
 ```
+
+------------------------------------------------------------------------
+
+## Etiquetado y codificación de los valores categóricos
+
+Repetimos para otras features:
 
 ```{r}
 df_test$bomb_planted <- as.factor(df_test$bomb_planted)
 df_test$bomb_planted <- as.numeric(df_test$bomb_planted)
-```
 
-```{r}
 df_test$round_winner <- as.factor(df_test$round_winner)
 df_test$round_winner <- as.numeric(df_test$round_winner)
 df_test$round_winner <- df_test$round_winner - 1
 ```
 
-```{r}
-head(df_test)
-```
+------------------------------------------------------------------------
+
+## Etiquetado y codificación de los valores categóricos
 
 ```{r}
 col <- colnames(df_test)
 c <- lapply(col, function(i) cor(df_test$round_winner, df_test[,i]))
 ```
 
-```{r}
+Visualizamos finalmente las variables que nos quedan en el dataset, todas numéricas:
+
+```{r results='markup'}
 str(df_test)
 ```
 
--------------------------------------------------
-Normalización de los datos usando Standard Scalar
--------------------------------------------------
+------------------------------------------------------------------------
 
-La primera línea carga la librería caret.
-La segunda línea crea el objeto standscl que se encarga de escalar los datos del dataframe df_test utilizando el metodo preProcess.
+# Normalización de los datos usando Standard Scalar
+
+En esta sección escalamos los datos y los centramos, tal y como se requiere en la mayoría de modelos de predicción.
+
+------------------------------------------------------------------------
+
+## Normalización de los datos usando Standard Scalar
+
+Escalamos los datos con preProcess y los volvemos a convertir a un DataFrame:
+
 ```{r}
 standscl <- preProcess(df_test, method = c("center", "scale"))
 ```
 
-La tercera línea se utiliza el objeto standscl para escalar los datos y se almacena en el mismo dataframe df_test.
-La cuarta línea convierte df_test a un dataframe de R.
 ```{r}
 df_test <- predict(standscl, df_test)
 df_test <- as.data.frame(df_test)
 ```
 
-La quinta línea se asignan los nombres de las columnas del dataframe df_test a la variable col.
-La sexta línea se codifica la variable round_winner utilizando la función as.factor() y as.numeric()
+Asignamos los nombres de las columnas al dataframe Convertimos las categorías CT y T en 1 y 2:
+
 ```{r}
 colnames(df_test) <- col
 df_test$round_winner <- as.factor(df_test$round_winner)
 df_test$round_winner <- as.numeric(df_test$round_winner)
 ```
 
-La séptima línea se utiliza la función head() para ver las primeras filas del dataframe.
+Finalmente, visualizamos el DataFrame ya escalado y codificado a numérico:
 
-Al final del proceso, se tiene un dataframe escalado y con la variable round_winner codificada.
-```{r}
+```{r results='markup'}
 head(df_test)
 ```
 
-```{r}
-View(df_test)
-```
+------------------------------------------------------------------------
 
+## División de datos en X e Y
 
---------------------------
-Dividir los datos en X e Y
---------------------------
+En esta sección, se divide el dataset en las variables predictoras(X) y la variable a predecir (Y = round_winner).
 
 ```{r}
 x <- df_test[ , !(names(df_test) %in% c("round_winner"))]
 head(x)
 ```
 
-```{r}
+```{r results='markup'}
 y <- df_test$round_winner
 y <- y-1
 head(y)
 ```
 
-----------------
-Train Test Split
-----------------
+------------------------------------------------------------------------
+
+## División en Train y Test
+
+Para dividir los datos, hemos utilizado la clásica regla del 80% y 20% para el train y el test set, respectivamente.
 
 ```{r}
 split <- createDataPartition(y, p = 0.8, list = FALSE)
@@ -256,7 +328,16 @@ x_test <- x[-split,]
 y_test <- y[-split]
 ```
 
-# Modelo 1: Logistic Regression
+------------------------------------------------------------------------
+
+# Modelos de predicción
+
+Para el problema en cuestión hemos creado un total de 5 modelos, una regresión logística, un árbol de decisión y tres SVM con diferentes kernels
+
+------------------------------------------------------------------------
+
+## MODELO: Regresión Logística
+
 ```{r}
 model_1 <- glm(y_train ~ ., data = x_train, family = binomial())
 pred_1 <- predict(model_1, x_test, type = "response")
@@ -270,10 +351,18 @@ y_test <- as.numeric(y_test)
 y_test <- as.factor(y_test)
 ```
 
-```{r}
+------------------------------------------------------------------------
+
+## MODELO: Regresión Logística
+
+```{r results='markup'}
 cr1 <- confusionMatrix(pred_1, y_test)
 print(cr1)
 ```
+
+------------------------------------------------------------------------
+
+## MODELO: Regresión Logística
 
 ```{r}
 conf_matrix <- as.data.frame(table(pred_1, y_test))
@@ -289,9 +378,11 @@ ggplot(data = conf_matrix, aes(x = pred_1, y = y_test)) +
   scale_fill_gradient(low = "#E0CB48", high = "#CE93D8")
 ```
 
-# Modelo 2: Decision Tree
+------------------------------------------------------------------------
 
-```{r}
+## MODELO: Árbol de decisión
+
+```{r results='markup'}
 library(rpart)
 model_2 <- rpart(y_train ~ ., data = x_train, method = "class")
 pred_2 <- predict(model_2, x_test, type = "class")
@@ -299,6 +390,9 @@ cr2 <- confusionMatrix(pred_2, y_test)
 print(cr2)
 ```
 
+------------------------------------------------------------------------
+
+## MODELO: Árbol de decisión
 
 ```{r}
 conf_matrix_2 <- as.data.frame(table(pred_2, y_test))
@@ -314,12 +408,22 @@ ggplot(data = conf_matrix_2, aes(x = pred_2, y = y_test)) +
   scale_fill_gradient(low = "#86B1D3", high = "#F49541" )
 ```
 
-```{r}
+------------------------------------------------------------------------
+
+## MODELO: Support Vector Machine (Polinomial)
+
+Utilizamos tres núcleos diferentes (por tanto tres modelos) en el SVM:
+
+```{r results='markup'}
 model_3 <- svm(y_train ~ ., data = x_train, type = "C-classification", kernel = "polynomial")
 pred_3 <- predict(model_3, x_test, type = "class")
 cr3 <- confusionMatrix(pred_3, y_test)
 print(cr3)
 ```
+
+------------------------------------------------------------------------
+
+## MODELO: Support Vector Machine (Polinomial)
 
 ```{r}
 conf_matrix_3 <- as.data.frame(table(pred_3, y_test))
@@ -335,12 +439,20 @@ ggplot(data = conf_matrix_3, aes(x = pred_3, y = y_test)) +
   scale_fill_gradient(low = "#90CAF9", high = "#FF410D" )
 ```
 
-```{r}
+------------------------------------------------------------------------
+
+## MODELO: Support Vector Machine (Radial)
+
+```{r results='markup'}
 model_4 <- svm(y_train ~ ., data = x_train, type = "C-classification", kernel = "radial")
 pred_4 <- predict(model_4, x_test, type = "class")
 cr4 <- confusionMatrix(pred_4, y_test)
 print(cr4)
 ```
+
+------------------------------------------------------------------------
+
+## MODELO: Support Vector Machine (Radial)
 
 ```{r}
 conf_matrix_4 <- as.data.frame(table(pred_4, y_test))
@@ -356,12 +468,20 @@ ggplot(data = conf_matrix_4, aes(x = pred_4, y = y_test)) +
   scale_fill_gradient(low = "#90CAF9", high = "#FF410D" )
 ```
 
-```{r}
+------------------------------------------------------------------------
+
+## MODELO: Support Vector Machine (Sigmoide)
+
+```{r results='markup'}
 model_5 <- svm(y_train ~ ., data = x_train, type = "C-classification", kernel = "sigmoid")
 pred_5 <- predict(model_5, x_test, type = "class")
 cr5 <- confusionMatrix(pred_5, y_test)
 print(cr5)
 ```
+
+------------------------------------------------------------------------
+
+## MODELO: Support Vector Machine (Sigmoide)
 
 ```{r}
 conf_matrix_5 <- as.data.frame(table(pred_5, y_test))
@@ -377,23 +497,208 @@ ggplot(data = conf_matrix_5, aes(x = pred_5, y = y_test)) +
   scale_fill_gradient(low = "#90CAF9", high = "#FF410D" )
 ```
 
+------------------------------------------------------------------------
+
+## Guardar valores Curvas ROC
+
+```{r}
+# Modelo 1
+y_test_model_1 <- as.numeric(y_test)
+pred_1_model_1 <- as.numeric(pred_1)
+y_test_model_1 <- y_test_model_1 - 1
+pred_1_model_1 <- pred_1_model_1 - 1
+roc_1 <- roc(y_test_model_1, pred_1_model_1)
+
+# Modelo 2
+y_test_model_2 <- as.numeric(y_test)
+pred_2_model_2 <- as.numeric(pred_2)
+y_test_model_2 <- y_test_model_2 - 1
+pred_2_model_2 <- pred_2_model_2 - 1
+roc_2 <- roc(y_test_model_2, pred_2_model_2)
+
+# Modelo 3
+y_test_model_3 <- as.numeric(y_test)
+pred_3_model_3 <- as.numeric(pred_3)
+y_test_model_3 <- y_test_model_3 - 1
+pred_3_model_3 <- pred_3_model_3 - 1
+roc_3 <- roc(y_test_model_3, pred_3_model_3)
+
+# Modelo 4
+y_test_model_4 <- as.numeric(y_test)
+pred_4_model_4 <- as.numeric(pred_4)
+y_test_model_4 <- y_test_model_4 - 1
+pred_4_model_4 <- pred_4_model_4 - 1
+roc_4 <- roc(y_test_model_4, pred_4_model_4)
+
+# Modelo 5
+y_test_model_5 <- as.numeric(y_test)
+pred_5_model_5 <- as.numeric(pred_5)
+y_test_model_5 <- y_test_model_5 - 1
+pred_5_model_5 <- pred_5_model_5 - 1
+roc_5 <- roc(y_test_model_5, pred_5_model_5)
+```
+
+------------------------------------------------------------------------
+
+## Tabla de rendimientos obtenidos - ROC/AUC
+
+```{r results='markup'}
+tabla_roc <- data.frame(Modelo = c("Logistic Regression", "Decision Tree", "SVM POLYNOMIAL", "SVM RADIAL", "SVM SIGMOID"), "ROC/AUC" = c(roc_1$auc, roc_2$auc, roc_3$auc, roc_4$auc, roc_5$auc))
+
+print(tabla_roc)
+```
+
+------------------------------------------------------------------------
+
+## Gráfico: Comparación Curvas ROC
+
+```{r}
+par(mfrow = c(1, 1))
+plot(roc_1, col = "blue", lwd = 2, main = "Comparación de curvas ROC", xaxt='n')
+text(0.3,0.5, paste("AUC:", format(auc(roc_1), digits=4)), col = "blue")
+plot(roc_2, col = "red", lwd = 2, add = TRUE, xaxt='n')
+text(0.3,0.42, paste("AUC:", format(auc(roc_2), digits=4)), col = "red")
+plot(roc_3, col = "#146C2F", lwd = 2, add = TRUE, xaxt='n')
+text(0.3,0.34, paste("AUC:", format(auc(roc_3), digits=4)), col = "#146C2F")
+plot(roc_4, col = "black", lwd = 2, add = TRUE, xaxt='n')
+text(0.3,0.26, paste("AUC:", format(auc(roc_4), digits=4)), col = "black")
+plot(roc_5, col = "#D75C20", lwd = 2, add = TRUE, xaxt='n')
+text(0.3,0.18, paste("AUC:", format(auc(roc_5), digits=4)), col = "#D75C20")
+legend(x = "bottomright", legend = c("Liner Regression", "Decision Tree", "SVM: Radial","SVM: Polynomial" , "SVM: Sigmoid"), col = c("blue", "red", "#146C2F", "black", "#D75C20"), lty = 1, cex = 0.8)
+```
+
+------------------------------------------------------------------------
+
+## Tabla de rendimientos obtenidos - Accuracy
+
+```{r results='markup'}
+accuracy_model_1 <- as.numeric(cr1$overall[1])
+accuracy_model_2 <- as.numeric(cr2$overall[1])
+accuracy_model_3 <- as.numeric(cr3$overall[1])
+accuracy_model_4 <- as.numeric(cr4$overall[1])
+accuracy_model_5 <- as.numeric(cr5$overall[1])
+
+tabla_accuracy <- data.frame(Modelo = c("Logistic Regression", "Decision Tree", "SVM POLYNOMIAL", "SVM RADIAL", "SVM SIGMOID"), Accuracy = c(accuracy_model_1, accuracy_model_2, accuracy_model_3, accuracy_model_4, accuracy_model_5))
+
+print(tabla_accuracy)
+```
+
+------------------------------------------------------------------------
+
+## Tabla rendimientos obtenidos - Kappa
+
+```{r results='markup'}
+kappa_model_1 <- as.numeric(cr1$overall[2])
+kappa_model_2 <- as.numeric(cr2$overall[2])
+kappa_model_3 <- as.numeric(cr3$overall[2])
+kappa_model_4 <- as.numeric(cr4$overall[2])
+kappa_model_5 <- as.numeric(cr5$overall[2])
+
+tabla_kappa <- data.frame(Modelo = c("Logistic Regression", "Decision Tree", "SVM POLYNOMIAL", "SVM RADIAL", "SVM SIGMOID"), Kappa = c(kappa_model_1, kappa_model_2, kappa_model_3, kappa_model_4, kappa_model_5))
+
+print(tabla_kappa)
+```
+
+------------------------------------------------------------------------
+
+## Tabla rendimientos obtenidos
+
+```{r results='markup'}
+tabla_rendimiento <- data.frame(Modelo = c("Logistic Regression", "Decision Tree", "SVM POLYNOMIAL", "SVM RADIAL", "SVM SIGMOID"), Accuracy = c(accuracy_model_1, accuracy_model_2, accuracy_model_3, accuracy_model_4, accuracy_model_5), Kappa = c(kappa_model_1, kappa_model_2, kappa_model_3, kappa_model_4, kappa_model_5), "ROC/AUC" = c(roc_1$auc, roc_2$auc, roc_3$auc, roc_4$auc, roc_5$auc))
+
+print(tabla_rendimiento)
+```
+
+------------------------------------------------------------------------
+
+## Gráfica rendimientos obtenidos
+
+```{r}
+barplot_performance <- data.frame(model = c("Logit Regression", "Decision Tree", "SVM Radial", "SVM Polynomial", "SVM Sigmoid"), accuracy = c(accuracy_model_1, accuracy_model_2, accuracy_model_3, accuracy_model_4, accuracy_model_5), kappa = c(kappa_model_1, kappa_model_2, kappa_model_3, kappa_model_4, kappa_model_5))
+
+ggplot(data = barplot_performance, aes(x = reorder(model, -accuracy), y = accuracy, fill = "Accuracy")) +
+  theme(plot.title = element_text(hjust = 0.5, size = 20)) +  
+  geom_bar(stat = "identity", position = position_dodge()) +
+  geom_bar(aes(x = reorder(model, -accuracy), y = kappa, fill = "Kappa"), stat = "identity", position = position_dodge())+
+  ggtitle("Rendimientos Obtenidos") +
+  ylab("") +
+  xlab("")+
+  scale_fill_manual(name = "", values = c("Accuracy" = "#1C5F9E", "Kappa" = "#E04E3D"))+
+  theme(legend.position = "bottom") +
+  scale_y_continuous(limits = c(0, 1)) +
+  geom_text(aes(label = round(accuracy, 3)), position = position_dodge(width = 1.5), vjust = -0.35) +
+  geom_text(aes(label = round(kappa, 3)), position = position_dodge(width = 1.5), vjust = 14.35)
+```
+
+------------------------------------------------------------------------
+
+## Guardar historial de métricas en archivo txt
+
+```{r}
+fileConn <- file("metrics.txt", open = "a")
+
+cat(paste0("Fecha: ", Sys.time()), "\n", file = fileConn, append = FALSE)
+cat(paste0("\nEntranmiento del modelo con ", dim(df_test)[1], " datos"), "\n", file = fileConn, append = FALSE)
+
+cat("\nAccuracy: ", "\n", file = fileConn, append = FALSE)
+cat("Logit Regression:", accuracy_model_1, "\n", file = fileConn, append = TRUE)
+cat("Decision Tree:", accuracy_model_2, "\n", file = fileConn, append = TRUE)
+cat("SVM Radial:", accuracy_model_3, "\n", file = fileConn, append = TRUE)
+cat("SVM Polynomial:", accuracy_model_4, "\n", file = fileConn, append = TRUE)
+cat("SVM Sigmoid:", accuracy_model_5, "\n", file = fileConn, append = TRUE)
+
+cat("\nKappa: ", "\n", file = fileConn, append = FALSE)
+cat("Logit Regression:", kappa_model_1, "\n", file = fileConn, append = TRUE)
+cat("Decision Tree:", kappa_model_2, "\n", file = fileConn, append = TRUE)
+cat("SVM Radial:", kappa_model_3, "\n", file = fileConn, append = TRUE)
+cat("SVM Polynomial:", kappa_model_4, "\n", file = fileConn, append = TRUE)
+cat("SVM Sigmoid:", kappa_model_5, "\n", file = fileConn, append = TRUE)
+cat("\n--------------------------- ", "\n", file = fileConn, append = FALSE)
+
+close(fileConn)
+```
+
+------------------------------------------------------------------------
+
+## Comparación de métricas según el número de datos:
+
+```{r}
+# Datos obtenidos en cada ejecución
+data_model_1 <- data.frame(x = c(200, 1500, 2500, 4000, 7000, 10000, 15000, 20000), 
+                           y = c(0.6666667, 0.7269625, 0.7770961, 0.7480818, 0.7434018, 0.7299383, 0.7397731, 0.7397933), model = "Logistic Regression")
+
+data_model_2 <- data.frame(x = c(200, 1500, 2500, 4000, 7000, 10000, 15000, 20000), 
+                           y = c(0.7692308, 0.7030717 , 0.7157464, 0.7186701, 0.7104106, 0.7309671, 0.7332417, 0.7160207), model = "Decision Tree")
+
+data_model_3 <- data.frame(x = c(200, 1500, 2500, 4000, 7000, 10000, 15000, 20000), 
+                           y = c(0.6923077, 0.7610922, 0.7668712, 0.7468031, 0.7468031, 0.7391975, 0.7548986, 0.7583979), model = "SVM: Polynomial")
+
+data_model_4 <- data.frame(x = c(200, 1500, 2500, 4000, 7000, 10000, 15000, 20000), 
+                           y = c(0.5897436 , 0.7610922, 0.7668712, 0.7647059, 0.7441349, 0.7391975, 0.7456171, 0.7591731), model = "SVM: Radial")
+
+data_model_5 <- data.frame(x = c(200, 1500, 2500, 4000, 7000, 10000, 15000, 20000),
+                           y = c(0.6666667, 0.7269625, 0.7402863, 0.7404092, 0.7104106, 0.6985597, 0.7023032, 0.6935401), model = "SVM: Sigmoid")
+
+# Combinación de datos
+accuracy_over_data_size <- rbind(data_model_1, data_model_2, data_model_3, data_model_4, data_model_5)
+
+ggplot(data = accuracy_over_data_size, aes(x = x, y = y, color = model)) + 
+  geom_smooth(formula = y ~ log(x), se = FALSE) +
+  theme(plot.title = element_text(hjust = 0.5, size = 15)) +
+  ggtitle("Accuracy obtenida por tamaño del dataset") +
+  xlab("Nº de datos") + 
+  ylab("") + 
+  scale_color_manual(values = c("Logistic Regression" = "blue", "Decision Tree" = "red", "SVM: Polynomial" = "#146C2F", "SVM: Radial" = "black", "SVM: Sigmoid" = "#D75C20"))
+```
 
 
+------------------------------------------------------------------------
 
+## Conclusión:
 
+Los modelos obtenidos son desde luego interesantes, especialmente el Logit por su velocidad de entrenamiento y el SVM, porque demuestra un incremento en accuracy conforme amuentamos la cantidad de datos de entrenamiento. Desgraciadamente, tiene un coste muy alto. Estos son los costes, siendo n el número de observaciones, p el número de features y asumiendo el peor escenario de entrenamiento posible:
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+1.  **Logit** con un O(np), suele ser el más rápido.
+2.  **Decision Trees** con un O(n\*log(n)), aunque aparentemente rápido, puede complicarse mucho si no se controla la profundidad del árbol.
+3.  **Support Vector Machine** con un O(n\^2) \~ O(n\^3), es el más lento de todos.
+4.  
