@@ -1,0 +1,38 @@
+Fecha: 2023-01-17 19:00:55 
+
+Entranmiento del modelo con 9724 datos 
+
+Accuracy:  
+Logit Regression: 0.7299383 
+Decision Tree: 0.7309671 
+SVM Radial: 0.7391975 
+SVM Polynomial: 0.7391975 
+SVM Sigmoid: 0.6985597 
+
+Kappa:  
+Logit Regression: 0.4594749 
+Decision Tree: 0.4624667 
+SVM Radial: 0.4774315 
+SVM Polynomial: 0.4780072 
+SVM Sigmoid: 0.3965464 
+
+---------------------------  
+Fecha: 2023-01-17 19:03:28 
+
+Entranmiento del modelo con 9724 datos 
+
+Accuracy:  
+Logit Regression: 0.7299383 
+Decision Tree: 0.7309671 
+SVM Radial: 0.7391975 
+SVM Polynomial: 0.7391975 
+SVM Sigmoid: 0.6985597 
+
+Kappa:  
+Logit Regression: 0.4594749 
+Decision Tree: 0.4624667 
+SVM Radial: 0.4774315 
+SVM Polynomial: 0.4780072 
+SVM Sigmoid: 0.3965464 
+
+---------------------------  
