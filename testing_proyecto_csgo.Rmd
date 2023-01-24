@@ -2,7 +2,7 @@
 title: ""
 author: ""
 date: "2023-01-18"
-output: slidy_presentation
+#output: slidy_presentation
 ---
 
 ```{r setup, include=FALSE}
@@ -31,6 +31,19 @@ df <- read.csv("csgo_round_snapshots.csv")
 
 ------------------------------------------------------------------------
 
+## Se crea una carpeta donde se van a guardar los gráficos en cada ejecución
+
+```{r message=TRUE}
+if (!dir.exists("graphics")) {
+  dir.create("graphics")
+}
+
+print("Directorio graphics ya creado")
+```
+
+
+------------------------------------------------------------------------
+
 ## Reproducibilidad del sistema
 
 Utilizamos set.seed para asegurar la reproducibilidad de los datos, y cogemos una muestra aleatoria con sample:
@@ -43,7 +56,12 @@ df = df[sample(1:nrow(df)), ]
 Una vez barajado, obtenemos los primeros 10.000 datos, ya que desgraciadamente carecemos de los recursos necesarios para utilizar todo el dataset y que no explote el ordenador:
 
 ```{r}
-df_test <- head(df, 10000)
+#df_test <- head(df, 100)
+#df_test <- head(df, 500)
+#df_test <- head(df, 1000)
+#df_test <- head(df, 2500)
+#df_test <- head(df, 5000)
+df_test <- head(df, 20000)
 ```
 
 ------------------------------------------------------------------------
@@ -154,7 +172,7 @@ Esto tiene sentido, ya que los propios desarrolladores lo han confirmado. Con es
 
 ## Visualización del dataset
 
-```{r results='markup'}
+```{r}
 ggplot(df_test, aes(x = round_winner)) + geom_bar(aes(fill = round_winner)) +
   stat_count(aes(label = ..count..), geom = "text", vjust = 2.0, color = "black", size = 6.5) +
   ggtitle("Rondas ganadas por cada equipo") +
@@ -165,6 +183,11 @@ ggplot(df_test, aes(x = round_winner)) + geom_bar(aes(fill = round_winner)) +
   theme(plot.caption = element_text(size=15)) +
   labs(caption = "Fuente: HTLV.org")
 ```
+
+```{r include=FALSE}
+ggsave(filename = paste0("graphics/", dim(df_test)[1], "_data_round_won_by_team.png"))
+```
+
 
 ------------------------------------------------------------------------
 
@@ -188,6 +211,11 @@ ggplot(df_test, aes(x = round_winner)) + geom_bar(aes(fill = round_winner)) +
   theme(plot.caption = element_text(size=15)) +
   labs(caption = "Fuente: HTLV.org")
 ```
+
+```{r include=FALSE}
+ggsave(filename = paste0("graphics/", dim(df_test)[1], "_data_round_won_by_team_all_maps.png"))
+```
+
 
 ------------------------------------------------------------------------
 
@@ -379,6 +407,10 @@ ggplot(data = conf_matrix, aes(x = pred_1, y = y_test)) +
   scale_fill_gradient(low = "#E0CB48", high = "#CE93D8")
 ```
 
+```{r include=FALSE}
+ggsave(filename = paste0("graphics/", dim(df_test)[1], "_data_logit_confusion_matrix.png"))
+```
+
 ------------------------------------------------------------------------
 
 ## MODELO: Árbol de decisión
@@ -407,6 +439,10 @@ ggplot(data = conf_matrix_2, aes(x = pred_2, y = y_test)) +
   geom_tile(aes(fill = Freq)) +
   geom_text(aes(label = Freq), color = "black", size = 6, vjust = 0.1, hjust = 0.6) +
   scale_fill_gradient(low = "#86B1D3", high = "#F49541" )
+```
+
+```{r include=FALSE}
+ggsave(filename = paste0("graphics/", dim(df_test)[1], "_data_decision_tree_confusion_matrix.png"))
 ```
 
 ------------------------------------------------------------------------
@@ -440,6 +476,10 @@ ggplot(data = conf_matrix_3, aes(x = pred_3, y = y_test)) +
   scale_fill_gradient(low = "#90CAF9", high = "#FF410D" )
 ```
 
+```{r include=FALSE}
+ggsave(filename = paste0("graphics/", dim(df_test)[1], "_data_svm_polynomial_confusion_matrix.png"))
+```
+
 ------------------------------------------------------------------------
 
 ## MODELO: Support Vector Machine (Radial)
@@ -469,6 +509,10 @@ ggplot(data = conf_matrix_4, aes(x = pred_4, y = y_test)) +
   scale_fill_gradient(low = "#90CAF9", high = "#FF410D" )
 ```
 
+```{r include=FALSE}
+ggsave(filename = paste0("graphics/", dim(df_test)[1], "_data_svm_radial_confusion_matrix.png"))
+```
+
 ------------------------------------------------------------------------
 
 ## MODELO: Support Vector Machine (Sigmoide)
@@ -496,6 +540,10 @@ ggplot(data = conf_matrix_5, aes(x = pred_5, y = y_test)) +
   geom_tile(aes(fill = Freq)) +
   geom_text(aes(label = Freq), color = "black", size = 6, vjust = 0.1, hjust = 0.6) +
   scale_fill_gradient(low = "#90CAF9", high = "#FF410D" )
+```
+
+```{r include=FALSE}
+ggsave(filename = paste0("graphics/", dim(df_test)[1], "_data_svm_sigmoid_confusion_matrix.png"))
 ```
 
 ------------------------------------------------------------------------
@@ -568,6 +616,10 @@ text(0.3,0.18, paste("AUC:", format(auc(roc_5), digits=4)), col = "#D75C20")
 legend(x = "bottomright", legend = c("Liner Regression", "Decision Tree", "SVM: Radial","SVM: Polynomial" , "SVM: Sigmoid"), col = c("blue", "red", "#146C2F", "black", "#D75C20"), lty = 1, cex = 0.8)
 ```
 
+```{r include=FALSE}
+ggsave(filename = paste0("graphics/", dim(df_test)[1], "_data_ROC_curve_values.png"))
+```
+
 ------------------------------------------------------------------------
 
 ## Tabla de rendimientos obtenidos - Accuracy
@@ -631,6 +683,10 @@ ggplot(data = barplot_performance, aes(x = reorder(model, -accuracy), y = accura
   geom_text(aes(label = round(kappa, 3)), position = position_dodge(width = 1.5), vjust = 14.35)
 ```
 
+```{r include=FALSE}
+ggsave(filename = paste0("graphics/", dim(df_test)[1], "_data_obtained_results.png"))
+```
+
 ------------------------------------------------------------------------
 
 ## Guardar historial de métricas en archivo txt
@@ -639,7 +695,7 @@ ggplot(data = barplot_performance, aes(x = reorder(model, -accuracy), y = accura
 fileConn <- file("metrics.txt", open = "a")
 
 cat(paste0("Fecha: ", Sys.time()), "\n", file = fileConn, append = FALSE)
-cat(paste0("\nEntranmiento del modelo con ", dim(df_test)[1], " datos"), "\n", file = fileConn, append = FALSE)
+cat(paste0("\nEntrenamiento del modelo con ", dim(df_test)[1], " datos"), "\n", file = fileConn, append = FALSE)
 
 cat("\nAccuracy: ", "\n", file = fileConn, append = FALSE)
 cat("Logit Regression:", accuracy_model_1, "\n", file = fileConn, append = TRUE)
@@ -692,6 +748,9 @@ ggplot(data = accuracy_over_data_size, aes(x = x, y = y, color = model)) +
   scale_color_manual(values = c("Logistic Regression" = "blue", "Decision Tree" = "red", "SVM: Polynomial" = "#146C2F", "SVM: Radial" = "black", "SVM: Sigmoid" = "#D75C20"))
 ```
 
+```{r include=FALSE}
+ggsave(filename = paste0("graphics/accuracy_obtained.png"))
+```
 
 ------------------------------------------------------------------------
 
@@ -702,4 +761,3 @@ Los modelos obtenidos son desde luego interesantes, especialmente el Logit por s
 1.  **Logit** con un O(np), suele ser el más rápido.
 2.  **Decision Trees** con un O(n\*log(n)), aunque aparentemente rápido, puede complicarse mucho si no se controla la profundidad del árbol.
 3.  **Support Vector Machine** con un O(n\^2) \~ O(n\^3), es el más lento de todos.
-4.  
