@@ -2,3 +2,4 @@
 
 ![Accuracy](https://github.com/scullen99/Csgo_Binary_Classification/blob/main/graphics/accuracy_obtained.png)
 
+![Rendimientos](https://github.com/scullen99/Csgo_Binary_Classification/blob/main/graphics/19350_data_obtained_results.png)
