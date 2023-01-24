@@ -1,1 +1,1 @@
-# R_csgo_Prediction_Proyect
+# Csgo Binary Prediction Proyect
