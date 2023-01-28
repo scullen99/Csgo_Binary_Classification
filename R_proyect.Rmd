@@ -2,7 +2,6 @@
 title: ""
 author: ""
 date: "2023-01-18"
-#output: slidy_presentation
 ---
 
 ```{r setup, include=FALSE}
