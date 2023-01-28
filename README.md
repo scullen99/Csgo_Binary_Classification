@@ -1,5 +1,16 @@
 # Csgo Binary Prediction Proyect
 
-![Accuracy](https://github.com/scullen99/Csgo_Binary_Classification/blob/main/graphics/accuracy_obtained.png)
+Librerías para ejecutar el código en R:
+```python
+library(ggplot2)
+library(psych)
+library(caret)
+library(e1071)
+library(stringr)
+library(pROC)
+```
 
-![Rendimientos](https://github.com/scullen99/Csgo_Binary_Classification/blob/main/graphics/19350_data_obtained_results.png)
+Librerías para ejecutar el código en Python:
+```python
+
+```
