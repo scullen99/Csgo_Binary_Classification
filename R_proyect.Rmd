@@ -754,6 +754,42 @@ if (!file.exists("graphics_r/accuracy_obtained.png")) {
 }
 ```
 
+
+----------------------
+
+```{r}
+# Create an empty data frame with the specified columns
+df_metrics_testing <- data.frame(number_data = numeric(),
+                         accuracy_m1 = numeric(),
+                         kappa_m1 = numeric())
+
+df_metrics_testing <- df_metrics_testing[,-1]
+
+# Write the empty data frame to a .csv file
+write.csv(data_frame, "test.csv")
+```
+
+```{r}
+fileConn <- file("test.csv", open = "a")
+cat(paste0("a,", dim(df_test)[1], ",", accuracy_model_1, ",", kappa_model_1, "\n"), file = fileConn, append = TRUE)
+close(fileConn)
+```
+
+```{r}
+library(ggplot2)
+
+testing_line_graph <- read.csv("test.csv")
+
+ggplot(data = testing_line_graph, aes(x = number_data, y = accuracy_m1)) +
+  geom_line()
+
+```
+
+```{r}
+testing_line_graph <- read.csv("test.csv")
+plot(testing_line_graph$number_data, testing_line_graph$accuracy_m1, type = "l", xlab = "number_data", ylab = "accuracy_m1")
+```
+
 ------------------------------------------------------------------------
 
 ## Conclusion:
